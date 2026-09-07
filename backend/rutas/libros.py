@@ -11,7 +11,8 @@ router = APIRouter(prefix="/api", tags=["Biblioteca"])
 class PrestamoRequest(BaseModel):
     libro_id: int
     nombre_estudiante: str
-    rut_curso: str
+    rut: str
+    curso: str
     cantidad: int = 1
 
 
@@ -25,7 +26,13 @@ def listar_libros():
     conexion = get_conexion()
     try:
         with conexion.cursor() as cursor:
-            cursor.execute("SELECT id, titulo, autor, isbn, descripcion, ejemplares FROM librosDF ORDER BY id DESC")
+            cursor.execute(
+                """
+                SELECT id, titulo, autor, isbn, descripcion, genero, anio_publicacion, ejemplares 
+                FROM librosDF 
+                ORDER BY id DESC
+                """
+            )
             libros = cursor.fetchall()
         return libros
     finally:
@@ -77,12 +84,12 @@ async def crear_libro(request: Request):
 
 
 # ======================================================================
-# ENDPOINTS PRÉSTAMOS
+# ENDPOINTS PRÉSTAMOS Y ESTUDIANTES
 # ======================================================================
 
 @router.post("/prestamos", status_code=201)
 def registrar_prestamo(data: PrestamoRequest):
-    """Registra un préstamo descontando ejemplares y registrando al estudiante si no existe."""
+    """Registra un préstamo descontando ejemplares y guardando/buscando al estudiante."""
     conexion = get_conexion()
     try:
         with conexion.cursor() as cursor:
@@ -93,18 +100,23 @@ def registrar_prestamo(data: PrestamoRequest):
                 raise HTTPException(status_code=404, detail="Libro no encontrado.")
             
             if libro["ejemplares"] < data.cantidad:
-                raise HTTPException(status_code=400, detail="Cantidad de ejemplares insuficientes.")
+                raise HTTPException(status_code=400, detail="Cantidad de ejemplares insuficiente.")
 
-            # 2. Registrar/Obtener Estudiante
-            cursor.execute("SELECT id FROM estudiantesDF WHERE rut_curso = %s", (data.rut_curso,))
+            # 2. Registrar/Obtener Estudiante buscando por RUT
+            cursor.execute("SELECT id FROM estudiantesDF WHERE rut = %s", (data.rut.strip(),))
             estudiante = cursor.fetchone()
             
             if estudiante:
                 estudiante_id = estudiante["id"]
+                # Actualizar curso si ha cambiado
+                cursor.execute(
+                    "UPDATE estudiantesDF SET curso = %s WHERE id = %s",
+                    (data.curso.strip(), estudiante_id)
+                )
             else:
                 cursor.execute(
-                    "INSERT INTO estudiantesDF (nombre, rut_curso) VALUES (%s, %s)",
-                    (data.nombre_estudiante, data.rut_curso)
+                    "INSERT INTO estudiantesDF (nombre, rut, curso) VALUES (%s, %s, %s)",
+                    (data.nombre_estudiante.strip(), data.rut.strip(), data.curso.strip())
                 )
                 estudiante_id = cursor.lastrowid
 
@@ -128,13 +140,13 @@ def registrar_prestamo(data: PrestamoRequest):
 
 @router.get("/prestamos")
 def listar_prestamos(estado: str = "Todos"):
-    """Lista todos los préstamos vinculados con libros y estudiantes."""
+    """Lista préstamos vinculados con libros y estudiantes."""
     conexion = get_conexion()
     try:
         with conexion.cursor() as cursor:
             query = """
                 SELECT p.id, p.fecha_prestamo AS fecha, e.nombre AS solicitante, 
-                       e.rut_curso AS curso, l.titulo AS herramienta, p.cantidad, p.estado
+                       e.rut, e.curso, l.titulo AS herramienta, p.cantidad, p.estado
                 FROM prestamosDF p
                 JOIN estudiantesDF e ON p.estudiante_id = e.id
                 JOIN librosDF l ON p.libro_id = l.id
@@ -152,7 +164,7 @@ def listar_prestamos(estado: str = "Todos"):
 
 @router.put("/prestamos/{prestamo_id}/devolver")
 def devolver_libro(prestamo_id: int):
-    """Marca un préstamo como devuelto y reintegra los ejemplares al libro."""
+    """Marca un préstamo como devuelto y reingresa el stock de libros."""
     conexion = get_conexion()
     try:
         with conexion.cursor() as cursor:
@@ -164,13 +176,13 @@ def devolver_libro(prestamo_id: int):
             if prestamo["estado"] == "Devuelto":
                 raise HTTPException(status_code=400, detail="El libro ya fue devuelto previamente.")
 
-            # Cambiar estado (Trigger registrará el evento 'DEVUELTO')
+            # Actualizar estado a Devuelto (Trigger insertará evento 'DEVUELTO')
             cursor.execute(
                 "UPDATE prestamosDF SET estado = 'Devuelto', fecha_devolucion = NOW() WHERE id = %s",
                 (prestamo_id,)
             )
 
-            # Reintegrar ejemplares
+            # Restablecer ejemplares
             cursor.execute(
                 "UPDATE librosDF SET ejemplares = ejemplares + %s WHERE id = %s",
                 (prestamo["cantidad"], prestamo["libro_id"])
