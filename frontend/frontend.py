@@ -1,8 +1,3 @@
-"""
-Sistema de Gestión de Biblioteca + Panel de Administración
-Interfaz Flet adaptada a la Base de Datos (FastAPI Backend)
-"""
-
 import flet as ft
 import requests
 
@@ -39,9 +34,6 @@ def main(page: ft.Page):
         except Exception:
             return []
 
-    # ======================================================================
-    # FUNCIONES DE SELECCIÓN Y CONSTRUCCIÓN DE TABLAS DE LIBROS
-    # ======================================================================
     def ver_detalle_libro(libro):
         seleccion["libro"] = libro
         inv_id.value = f"ID Libro: {libro.get('id', 'N/A')}"
@@ -116,10 +108,7 @@ def main(page: ft.Page):
         tabla_libros_inv.rows = filas_inv
         tabla_libros_prestamo.rows = filas_prestamo
         page.update()
-
-    # ======================================================================
     # SECCIÓN 1: VISTA DE TABLA librosDF
-    # ======================================================================
     inv_id = ft.Text("ID: -", color=TEXT)
     inv_nombre = ft.Text("Seleccione un libro", size=22, weight="bold", color="#0f172a")
     inv_autor = ft.Text("Autor: -", color=TEXT)
@@ -192,9 +181,7 @@ def main(page: ft.Page):
         ]),
     ], spacing=20)
 
-    # ======================================================================
     # SECCIÓN 2: PRÉSTAMOS
-    # ======================================================================
     prestamo_titulo = ft.Text("Seleccione un libro para solicitar", size=20, weight="bold", color=PRIMARY)
     prestamo_stock_disp = ft.Text("0", size=18, weight="bold", color=TEXT)
     nombre_solicitante = ft.TextField(label="Nombre del Estudiante", bgcolor="white")
@@ -280,9 +267,7 @@ def main(page: ft.Page):
         ]),
     ], spacing=20)
 
-    # ======================================================================
     # SECCIÓN 3: HISTORIAL Y TRIGGERS
-    # ======================================================================
     tabla_prestamos = ft.DataTable(
         columns=[ft.DataColumn(ft.Text(t, weight="bold")) for t in ["ID", "Fecha", "Estudiante", "RUT", "Curso", "Libro", "Cant.", "Estado", "Acción"]],
         rows=[],
@@ -408,9 +393,7 @@ def main(page: ft.Page):
         )
     ], spacing=20)
 
-    # ======================================================================
     # CONFIGURACIÓN Y NAVEGACIÓN
-    # ======================================================================
     def refrescar_todo():
         actualizar_tablas_libros()
         renderizar_tabla_prestamos()
