@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS prestamosDF (
     FOREIGN KEY (libro_id) REFERENCES librosDF(id) ON DELETE CASCADE
 );
 
+--- 4. Tabla de Historial de Préstamos
 CREATE TABLE IF NOT EXISTS historial_prestamosDF (
     id INT AUTO_INCREMENT PRIMARY KEY,
     prestamo_id INT NOT NULL,
