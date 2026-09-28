@@ -52,7 +52,16 @@ def main(page: ft.Page):
         prestamo_stock_disp.value = str(libro.get("ejemplares", 0))
         page.update()
 
-    # Tablas para mostrar los libros de forma segura
+    def tabla_desplazable(tabla, alto=360):
+        return ft.Container(
+            content=ft.Column(
+                controls=[ft.Row(controls=[tabla], scroll=ft.ScrollMode.AUTO)],
+                scroll=ft.ScrollMode.AUTO,
+            ),
+            height=alto,
+        )
+
+    # Tablas para mostrar los libros
     tabla_libros_inv = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("ID", weight="bold")),
@@ -142,7 +151,7 @@ def main(page: ft.Page):
                                 on_change=lambda e: actualizar_tablas_libros(e.control.value)
                             ),
                             ft.Divider(height=1, color="#e2e8f0"),
-                            ft.Row([tabla_libros_inv], scroll="auto"),
+                            tabla_desplazable(tabla_libros_inv),
                         ], spacing=15),
                     )
                 ),
@@ -234,7 +243,7 @@ def main(page: ft.Page):
                         content=ft.Column([
                             ft.Text("Seleccionar Libro a Solicitar", size=16, weight="bold", color=TEXT),
                             ft.Divider(height=1, color="#e2e8f0"),
-                            ft.Row([tabla_libros_prestamo], scroll="auto"),
+                            tabla_desplazable(tabla_libros_prestamo),
                         ], spacing=15),
                     )
                 ),
@@ -344,7 +353,7 @@ def main(page: ft.Page):
                 ft.ElevatedButton("En Préstamo", on_click=lambda e: filtrar_estado_prestamos("Prestado")),
                 ft.ElevatedButton("Devueltos", on_click=lambda e: filtrar_estado_prestamos("Devuelto")),
             ], spacing=10),
-            ft.Row([tabla_prestamos], scroll="auto"),
+            tabla_desplazable(tabla_prestamos),
         ], spacing=12),
         padding=16
     )
@@ -352,7 +361,7 @@ def main(page: ft.Page):
     sub_vista_triggers = ft.Container(
         ft.Column([
             ft.Text("Registros automáticos creados por los Triggers SQL al Insertar/Actualizar:", color="#64748b"),
-            ft.Row([tabla_triggers], scroll="auto"),
+            tabla_desplazable(tabla_triggers),
         ], spacing=12),
         padding=16
     )
